@@ -40,7 +40,7 @@ export default function RegisterPage() {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-800">Create account</h1>
           <p className="text-gray-400 text-sm mt-2">
-            Join us today — it's free
+            Join us today — it is free
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
