@@ -27,6 +27,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
       });
       setAccessToken(data.accessToken);
+      localStorage.setItem("user", JSON.stringify(data.user));
       set({ user: data.user, isLoading: false });
     } catch (err: unknown) {
       const error = err as ApiError;
@@ -47,6 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
       });
       setAccessToken(data.accessToken);
+      localStorage.setItem("user", JSON.stringify(data.user));
       set({ user: data.user, isLoading: false });
     } catch (err: unknown) {
       const error = err as ApiError;
@@ -65,20 +67,35 @@ export const useAuthStore = create<AuthState>((set) => ({
       /* ignore */
     }
     setAccessToken(null);
+    localStorage.removeItem("user");
     set({ user: null });
   },
 
   refreshAuth: async () => {
-    try {
-      const { data } = await api.post<AuthResponse>("/auth/refresh");
-      setAccessToken(data.accessToken);
-      set({ user: data.user });
-      return true;
-    } catch {
-      setAccessToken(null);
-      set({ user: null });
-      return false;
+    // First restore user from localStorage
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      try {
+        const user = JSON.parse(stored) as User;
+        set({ user });
+        // Try to get a fresh access token silently
+        try {
+          const { data } = await api.post<AuthResponse>("/auth/refresh");
+          setAccessToken(data.accessToken);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          set({ user: data.user });
+        } catch {
+          // refresh token failed but user is still in localStorage
+          // they can still browse but will need to login again for protected actions
+        }
+        return true;
+      } catch {
+        localStorage.removeItem("user");
+      }
     }
+    setAccessToken(null);
+    set({ user: null });
+    return false;
   },
 
   clearError: () => set({ error: null }),
