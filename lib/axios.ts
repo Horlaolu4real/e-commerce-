@@ -4,9 +4,26 @@ let accessToken: string | null = null;
 
 export const setAccessToken = (token: string | null): void => {
   accessToken = token;
+  if (typeof window !== "undefined") {
+    if (token) {
+      localStorage.setItem("accessToken", token);
+    } else {
+      localStorage.removeItem("accessToken");
+    }
+  }
 };
 
-export const getAccessToken = (): string | null => accessToken;
+export const getAccessToken = (): string | null => {
+  if (accessToken) return accessToken;
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("accessToken");
+    if (stored) {
+      accessToken = stored;
+      return stored;
+    }
+  }
+  return null;
+};
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -14,8 +31,9 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   if (!(config.data instanceof FormData)) {
     config.headers["Content-Type"] = "application/json";
@@ -48,6 +66,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch {
         setAccessToken(null);
+        localStorage.removeItem("user");
         if (typeof window !== "undefined") window.location.href = "/login";
       }
     }
